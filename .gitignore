@@ -1,0 +1,4 @@
+*.bin
+makefile
+__pycache__
+*.nb
