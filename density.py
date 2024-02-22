@@ -182,7 +182,7 @@ class PhaseSpaceDTFE:
     def v(self, p):
         simplexIndices = self.BVH.findIntersections(p, self.points, self.simplices)
         
-        vs = np.zeros([len(simplexIndices), 2])
+        vs = np.zeros([len(simplexIndices), self.dim])
         for i, simplexIndex in enumerate(simplexIndices):
             pointIndex   = self.simplices[simplexIndex][0]
             vs[i] = self.velocities[pointIndex] + self.Dv[simplexIndex] @ (p - self.points[pointIndex])
