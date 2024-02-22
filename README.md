@@ -6,3 +6,5 @@ Besides the Phase-Space Delaunay Tesselation Field Estimator, the module enables
 
 The current implementation uses the numpy, math and scipy modules in Python 3.12, though the code will likely run without much trouble in earlier versions.
 
+In the script Example.py and notebook Example.ipynb we demonstrate how the module can be used for the reconstruction of density and velocity fields.
+
