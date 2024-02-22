@@ -8,3 +8,8 @@ The current implementation uses the numpy, math and scipy modules in Python 3.12
 
 In the script Example.py and notebook Example.ipynb we demonstrate how the module can be used for the reconstruction of density and velocity fields.
 
+|:-------------------------:|:-------------------------:|
+|![DTFE](figures/close_0.png) | ![Phase-space](figures/close_1.png) |
+|![PS-DTFE](figures/close_2.png) | ![Streams](figures/close_3.png) |
+|:-------------------------:|:-------------------------:|
+
