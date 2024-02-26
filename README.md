@@ -1,6 +1,6 @@
 # Phase-Space Delaunay Tessellation Field Estimator
 
-The density and velocity fields of an N-body simulation can be reconstructed with the Phase-Space Delaunay Tessellation Field Estimator implemented in a Python module. This code accompanies the publication [Phase-Space Delaunay Tesselation Field Estimator](https://pages.github.com/). Please cite this publication when using the code.
+The density and velocity fields of an N-body simulation can be reconstructed with the Phase-Space Delaunay Tessellation Field Estimator implemented in a Python module. This code accompanies the publication [Phase-Space Delaunay Tesselation Field Estimator](https://github.com/jfeldbrugge/PS-DTFE). Please cite this publication when using the code.
 
 Besides the Phase-Space Delaunay Tesselation Field Estimator, the module enables the evaluation of the traditional Delaunay Tesselation Field Estimator and the traditional Phase-Space estimator (see the figure below). We refer to the above-mentioned paper for a brief explanation of these methods and references to the papers where these techniques are developed.
 
