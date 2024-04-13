@@ -1,3 +1,6 @@
+using LinearAlgebra
+using Delaunay
+
 struct BVH
     data::Union{Vector{Int}, Nothing}
     box::Matrix{Float64}
