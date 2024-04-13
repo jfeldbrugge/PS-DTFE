@@ -3,3 +3,4 @@ makefile
 __pycache__
 *.nb
 Example3D.py
+.DS_Store
