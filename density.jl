@@ -73,7 +73,7 @@ end
 
 volume(sim, points) = abs(det(points[sim[2:end],:]' .- points[sim[1],:])) /  factorial(size(points)[2])
 
-struct ps_dtfe
+struct PS_DTFE
     rho::Vector{Float64}
     Drho::Matrix{Float64}
     Dv::Array{Float64}
@@ -83,7 +83,7 @@ struct ps_dtfe
     velocities::Matrix{Float64}
 end
 
-ps_dtfe_constructor = function (positions_initial, positions, velocities, m, depth, box)
+PS_DTFE_constructor = function (positions_initial, positions, velocities, m, depth, box)
     simplices = delaunay(positions_initial).simplices
     dim = size(box)[1]
 
@@ -110,10 +110,10 @@ ps_dtfe_constructor = function (positions_initial, positions, velocities, m, dep
         Dv[i,:,:] = A_inv * ((v[2:end,:]' .- v[1,:])')
     end
 
-    return ps_dtfe(rho, Drho, Dv, BVH_tree, simplices, positions, velocities)
+    return PS_DTFE(rho, Drho, Dv, BVH_tree, simplices, positions, velocities)
 end
 
-density = function (p::Vector{Float64}, estimator::ps_dtfe)
+density = function (p::Vector{Float64}, estimator::PS_DTFE)
     simplexIndices = findIntersections(p, estimator.tree, estimator.positions, estimator.simplices)
 
     dens = 0.
@@ -124,7 +124,7 @@ density = function (p::Vector{Float64}, estimator::ps_dtfe)
     return dens
 end
 
-v = function (p::Vector{Float64}, estimator::ps_dtfe)
+v = function (p::Vector{Float64}, estimator::PS_DTFE)
     simplexIndices = findIntersections(p, estimator.tree, estimator.positions, estimator.simplices)
 
     vs = zeros(length(simplexIndices), length(p))
@@ -137,7 +137,7 @@ v = function (p::Vector{Float64}, estimator::ps_dtfe)
     
 end
 
-numberOfStreams = function (p::Vector{Float64}, estimator::ps_dtfe)
+numberOfStreams = function (p::Vector{Float64}, estimator::PS_DTFE)
     simplexIndices = findIntersections(p, estimator.tree, estimator.positions, estimator.simplices)
     return length(simplexIndices)
 end
