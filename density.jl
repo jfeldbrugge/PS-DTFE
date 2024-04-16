@@ -9,7 +9,7 @@ struct BVH
     right::Union{BVH, Nothing}
 end
 
-BVH_constructor = function(data, box, points, simplices, depth)
+function BVH(data, box::Matrix{Float64}, points::Matrix{Float64}, simplices, depth::Int)
     if depth != 0
         dim = (depth % size(box)[1]) + 1
         mins = vec(minimum(positions[simplices[data, :], dim], dims = 2))
@@ -26,14 +26,14 @@ BVH_constructor = function(data, box, points, simplices, depth)
         Rbox = copy(box)
         Rbox[dim,:] = [div, Rbox[dim, 2]]
 
-        BVH(nothing, box, depth, BVH_constructor(data[L], Lbox, points, simplices, depth - 1), 
-                                 BVH_constructor(data[R], Rbox, points, simplices, depth - 1))
+        BVH(nothing, box, depth, BVH(data[L], Lbox, points, simplices, depth - 1), 
+                                 BVH(data[R], Rbox, points, simplices, depth - 1))
     else 
         BVH(data, box, depth, nothing, nothing)
     end
 end
 
-findCandidateSimplices = function (p::Vector{Float64}, BVH_tree::BVH)
+ function findCandidateSimplices(p::Vector{Float64}, BVH_tree::BVH)
     dim = (BVH_tree.depth % size(BVH_tree.box)[1]) + 1
     if BVH_tree.depth == 0
         return BVH_tree.data
@@ -47,7 +47,7 @@ findCandidateSimplices = function (p::Vector{Float64}, BVH_tree::BVH)
     end
 end
 
-findBox = function (p::Vector{Float64}, BVH_tree::BVH)
+function findBox(p::Vector{Float64}, BVH_tree::BVH)
     dim = (BVH_tree.depth % size(BVH_tree.box)[1]) + 1
     if BVH_tree.depth == 0
         println(BVH_tree.box)
@@ -61,12 +61,12 @@ findBox = function (p::Vector{Float64}, BVH_tree::BVH)
     end
 end
 
-intersection = function (p::Vector{Float64}, simplex::Matrix{Float64})
+function intersection(p::Vector{Float64}, simplex::Matrix{Float64})
     barry = inv(simplex[2:end,:]' .- simplex[1,:]) * (p .- simplex[1,:])
     return all(barry .>= 0) & all(barry .<= 1) & (sum(barry) <= 1.)
 end
 
-findIntersections = function (p::Vector{Float64}, BVH_tree::BVH, points, simplices)
+function findIntersections(p::Vector{Float64}, BVH_tree::BVH, points, simplices)
     candidates = findCandidateSimplices(p, BVH_tree)
     filter(i -> intersection(p, points[simplices[i,:],:]), candidates)
 end
@@ -81,39 +81,39 @@ struct PS_DTFE
     simplices::Matrix{Int}
     positions::Matrix{Float64}
     velocities::Matrix{Float64}
-end
 
-PS_DTFE_constructor = function (positions_initial, positions, velocities, m, depth, box)
-    simplices = delaunay(positions_initial).simplices
-    dim = size(box)[1]
-
-    BVH_tree = BVH_constructor(1:size(simplices)[1], box, positions, simplices, depth * dim)
-
-    rho = zeros(size(positions)[1])
-    for i in axes(simplices, 1)
-        vol = volume(simplices[i,:], positions)
-        for index in simplices[i,:]
-            rho[index] += vol
+    function PS_DTFE(positions_initial, positions, velocities, m, depth, box)
+        simplices = delaunay(positions_initial).simplices
+        dim = size(box)[1]
+    
+        BVH_tree = BVH(1:size(simplices)[1], box, positions, simplices, depth * dim)
+    
+        rho = zeros(size(positions)[1])
+        for i in axes(simplices, 1)
+            vol = volume(simplices[i,:], positions)
+            for index in simplices[i,:]
+                rho[index] += vol
+            end
         end
+        rho = (1. + dim) * m ./ rho
+    
+        Drho = zeros(size(simplices)[1], dim)
+        Dv   = zeros(size(simplices)[1], dim, dim)
+    
+        for i in axes(simplices, 1)
+            p = positions[simplices[i,:],:]
+            r = rho[simplices[i,:],:]
+            v = velocities[simplices[i,:],:]
+            A_inv = inv(p[2:end,:]' .- p[1,:])'
+            Drho[i,:] = A_inv * (r[2:end] .- r[1])
+            Dv[i,:,:] = A_inv * ((v[2:end,:]' .- v[1,:])')
+        end
+    
+        return new(rho, Drho, Dv, BVH_tree, simplices, positions, velocities)
     end
-    rho = (1. + dim) * m ./ rho
-
-    Drho = zeros(size(simplices)[1], dim)
-    Dv   = zeros(size(simplices)[1], dim, dim)
-
-    for i in axes(simplices, 1)
-        p = positions[simplices[i,:],:]
-        r = rho[simplices[i,:],:]
-        v = velocities[simplices[i,:],:]
-        A_inv = inv(p[2:end,:]' .- p[1,:])'
-        Drho[i,:] = A_inv * (r[2:end] .- r[1])
-        Dv[i,:,:] = A_inv * ((v[2:end,:]' .- v[1,:])')
-    end
-
-    return PS_DTFE(rho, Drho, Dv, BVH_tree, simplices, positions, velocities)
 end
 
-density = function (p::Vector{Float64}, estimator::PS_DTFE)
+ function density(p::Vector{Float64}, estimator::PS_DTFE)
     simplexIndices = findIntersections(p, estimator.tree, estimator.positions, estimator.simplices)
 
     dens = 0.
@@ -124,7 +124,7 @@ density = function (p::Vector{Float64}, estimator::PS_DTFE)
     return dens
 end
 
-v = function (p::Vector{Float64}, estimator::PS_DTFE)
+ function v(p::Vector{Float64}, estimator::PS_DTFE)
     simplexIndices = findIntersections(p, estimator.tree, estimator.positions, estimator.simplices)
 
     vs = zeros(length(simplexIndices), length(p))
@@ -137,7 +137,7 @@ v = function (p::Vector{Float64}, estimator::PS_DTFE)
     
 end
 
-numberOfStreams = function (p::Vector{Float64}, estimator::PS_DTFE)
+function numberOfStreams(p::Vector{Float64}, estimator::PS_DTFE)
     simplexIndices = findIntersections(p, estimator.tree, estimator.positions, estimator.simplices)
     return length(simplexIndices)
 end
