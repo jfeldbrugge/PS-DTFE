@@ -12,8 +12,8 @@ end
 function BVH(data, box::Matrix{Float64}, points::Matrix{Float64}, simplices, depth::Int)
     if depth != 0
         dim = (depth % size(box)[1]) + 1
-        mins = vec(minimum(positions[simplices[data, :], dim], dims = 2))
-        maxs = vec(maximum(positions[simplices[data, :], dim], dims = 2))
+        mins = vec(minimum(points[simplices[data, :], dim], dims = 2))
+        maxs = vec(maximum(points[simplices[data, :], dim], dims = 2))
         
         mean(x) = sum(x) / length(x)
 
