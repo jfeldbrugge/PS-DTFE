@@ -1,3 +1,4 @@
+*.json
 *.bin
 makefile
 __pycache__
