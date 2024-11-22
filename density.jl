@@ -12,8 +12,8 @@ end
 function BVH(data, box::Matrix{Float64}, points::Matrix{Float64}, simplices, depth::Int)
     if depth != 0
         dim = (depth % size(box)[1]) + 1
-        mins = vec(minimum(positions[simplices[data, :], dim], dims = 2))
-        maxs = vec(maximum(positions[simplices[data, :], dim], dims = 2))
+        mins = vec(minimum(points[simplices[data, :], dim], dims = 2))
+        maxs = vec(maximum(points[simplices[data, :], dim], dims = 2))
         
         mean(x) = sum(x) / length(x)
 
@@ -113,7 +113,7 @@ struct PS_DTFE
     end
 end
 
- function density(p::Vector{Float64}, estimator::PS_DTFE)
+function density(p::Vector{Float64}, estimator::PS_DTFE)
     simplexIndices = findIntersections(p, estimator.tree, estimator.positions, estimator.simplices)
 
     dens = 0.
@@ -124,7 +124,7 @@ end
     return dens
 end
 
- function v(p::Vector{Float64}, estimator::PS_DTFE)
+function v(p::Vector{Float64}, estimator::PS_DTFE)
     simplexIndices = findIntersections(p, estimator.tree, estimator.positions, estimator.simplices)
 
     vs = zeros(length(simplexIndices), length(p))
@@ -134,7 +134,6 @@ end
         vs[i,:] = estimator.velocities[pointIndex,:] + estimator.Dv[simplexIndex,:,:] * (p .- estimator.positions[pointIndex,:])
     end
     return vs
-    
 end
 
 function numberOfStreams(p::Vector{Float64}, estimator::PS_DTFE)
