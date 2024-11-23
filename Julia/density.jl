@@ -11,27 +11,27 @@ end
 function BVH(data, box::Matrix{Float64}, points::Matrix{Float64}, simplices, depth::Int)
     if depth != 0
         dim = (depth % size(box, 1)) + 1
-        mins = vec(minimum(@view(points[@view(simplices[data, :]), dim]), dims = 2))
-        maxs = vec(maximum(@view(points[@view(simplices[data, :]), dim]), dims = 2))
+        @inbounds mins = vec(minimum(@view(points[@view(simplices[data, :]), dim]), dims = 2))
+        @inbounds maxs = vec(maximum(@view(points[@view(simplices[data, :]), dim]), dims = 2))
         
         @inbounds div = sum(@view(box[dim,:])) / length(@view(box[dim,:]))
         L = mins .<= div
         R = maxs .>= div
 
         Lbox = copy(box)
-        Lbox[dim,:] = [Lbox[dim, 1], div]
+        @inbounds Lbox[dim,:] = [Lbox[dim, 1], div]
         Rbox = copy(box)
-        Rbox[dim,:] = [div, Rbox[dim, 2]]
+        @inbounds Rbox[dim,:] = [div, Rbox[dim, 2]]
 
-        BVH(nothing, box, depth, BVH(data[L], Lbox, points, simplices, depth - 1), 
-                                 BVH(data[R], Rbox, points, simplices, depth - 1))
+        @inbounds BVH(nothing, box, depth, BVH(data[L], Lbox, points, simplices, depth - 1), 
+                                           BVH(data[R], Rbox, points, simplices, depth - 1))
     else 
         BVH(data, box, depth, nothing, nothing)
     end
 end
 
- function findCandidateSimplices(p::Vector{Float64}, BVH_tree::BVH)
-    dim = (BVH_tree.depth % size(BVH_tree.box)[1]) + 1
+function findCandidateSimplices(p::Vector{Float64}, BVH_tree::BVH)
+    dim = (BVH_tree.depth % size(BVH_tree.box, 1)) + 1
     if BVH_tree.depth == 0
         return BVH_tree.data
     elseif p[dim] < BVH_tree.left.box[dim, 2]
@@ -45,7 +45,7 @@ end
 end
 
 function findBox(p::Vector{Float64}, BVH_tree::BVH)
-    dim = (BVH_tree.depth % size(BVH_tree.box)[1]) + 1
+    dim = (BVH_tree.depth % size(BVH_tree.box, 1)) + 1
     if BVH_tree.depth == 0
         println(BVH_tree.box)
     elseif p[dim] < BVH_tree.left.box[dim, 2]
@@ -59,16 +59,16 @@ function findBox(p::Vector{Float64}, BVH_tree::BVH)
 end
 
 function intersection(p::Vector{Float64}, simplex)
-    barry = inv(@view(simplex[2:end,:])' .- @view(simplex[1,:])) * (p .- @view(simplex[1,:]))
+    @inbounds barry = inv(@view(simplex[2:end,:])' .- @view(simplex[1,:])) * (p .- @view(simplex[1,:]))
     return all(barry .>= 0) & all(barry .<= 1) & (sum(barry) <= 1.)
 end
 
 function findIntersections(p::Vector{Float64}, BVH_tree::BVH, points, simplices)
     candidates = findCandidateSimplices(p, BVH_tree)
-    filter(i -> intersection(p, @view(points[@view(simplices[i,:]),:])), candidates)
+    @inbounds filter(i -> intersection(p, @view(points[@view(simplices[i,:]),:])), candidates)
 end
 
-volume(sim, points) = abs(det(@view(points[@view(sim[2:end]),:])' .- @view(points[sim[1],:]))) /  factorial(size(points)[2])
+volume(sim, points) = @inbounds abs(det(@view(points[@view(sim[2:end]),:])' .- @view(points[sim[1],:]))) /  factorial(size(points, 2))
 
 struct PS_DTFE
     rho::Vector{Float64}
@@ -88,7 +88,7 @@ struct PS_DTFE
         rho = zeros(size(positions,1))
         @inbounds for i in axes(simplices, 1)
             vol = volume(@view(simplices[i,:]), positions)
-            for index in @view(simplices[i,:])
+            @inbounds for index in @view(simplices[i,:])
                 rho[index] += vol
             end
         end
