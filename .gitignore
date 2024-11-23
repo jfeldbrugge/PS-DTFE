@@ -5,3 +5,4 @@ __pycache__
 *.nb
 Example3D.py
 .DS_Store
+.vscode

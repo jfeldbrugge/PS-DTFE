@@ -1,5 +1,4 @@
-using LinearAlgebra
-using Delaunay
+using LinearAlgebra, Delaunay, StaticArrays
 
 struct BVH
     data::Union{Vector{Int}, Nothing}
@@ -11,13 +10,11 @@ end
 
 function BVH(data, box::Matrix{Float64}, points::Matrix{Float64}, simplices, depth::Int)
     if depth != 0
-        dim = (depth % size(box)[1]) + 1
-        mins = vec(minimum(points[simplices[data, :], dim], dims = 2))
-        maxs = vec(maximum(points[simplices[data, :], dim], dims = 2))
+        dim = (depth % size(box, 1)) + 1
+        mins = vec(minimum(@view(points[@view(simplices[data, :]), dim]), dims = 2))
+        maxs = vec(maximum(@view(points[@view(simplices[data, :]), dim]), dims = 2))
         
-        mean(x) = sum(x) / length(x)
-
-        div = mean(box[dim,:])
+        @inbounds div = sum(@view(box[dim,:])) / length(@view(box[dim,:]))
         L = mins .<= div
         R = maxs .>= div
 
@@ -61,17 +58,17 @@ function findBox(p::Vector{Float64}, BVH_tree::BVH)
     end
 end
 
-function intersection(p::Vector{Float64}, simplex::Matrix{Float64})
-    barry = inv(simplex[2:end,:]' .- simplex[1,:]) * (p .- simplex[1,:])
+function intersection(p::Vector{Float64}, simplex)
+    barry = inv(@view(simplex[2:end,:])' .- @view(simplex[1,:])) * (p .- @view(simplex[1,:]))
     return all(barry .>= 0) & all(barry .<= 1) & (sum(barry) <= 1.)
 end
 
 function findIntersections(p::Vector{Float64}, BVH_tree::BVH, points, simplices)
     candidates = findCandidateSimplices(p, BVH_tree)
-    filter(i -> intersection(p, points[simplices[i,:],:]), candidates)
+    filter(i -> intersection(p, @view(points[@view(simplices[i,:]),:])), candidates)
 end
 
-volume(sim, points) = abs(det(points[sim[2:end],:]' .- points[sim[1],:])) /  factorial(size(points)[2])
+volume(sim, points) = abs(det(@view(points[@view(sim[2:end]),:])' .- @view(points[sim[1],:]))) /  factorial(size(points)[2])
 
 struct PS_DTFE
     rho::Vector{Float64}
@@ -84,29 +81,30 @@ struct PS_DTFE
 
     function PS_DTFE(positions_initial, positions, velocities, m, depth, box)
         simplices = delaunay(positions_initial).simplices
-        dim = size(box)[1]
+        dim = size(box, 1)
     
-        BVH_tree = BVH(1:size(simplices)[1], box, positions, simplices, depth * dim)
+        BVH_tree = BVH(1:size(simplices, 1), box, positions, simplices, depth * dim)
     
-        rho = zeros(size(positions)[1])
-        for i in axes(simplices, 1)
-            vol = volume(simplices[i,:], positions)
-            for index in simplices[i,:]
+        rho = zeros(size(positions,1))
+        @inbounds for i in axes(simplices, 1)
+            vol = volume(@view(simplices[i,:]), positions)
+            for index in @view(simplices[i,:])
                 rho[index] += vol
             end
         end
         rho = (1. + dim) * m ./ rho
     
-        Drho = zeros(size(simplices)[1], dim)
-        Dv   = zeros(size(simplices)[1], dim, dim)
+        Drho = zeros(size(simplices, 1), dim)
+        Dv   = zeros(size(simplices, 1), dim, dim)
     
-        for i in axes(simplices, 1)
-            p = positions[simplices[i,:],:]
-            r = rho[simplices[i,:],:]
-            v = velocities[simplices[i,:],:]
-            A_inv = inv(p[2:end,:]' .- p[1,:])'
-            Drho[i,:] = A_inv * (r[2:end] .- r[1])
-            Dv[i,:,:] = A_inv * ((v[2:end,:]' .- v[1,:])')
+        @inbounds for i in axes(simplices, 1)
+            sim = @view(simplices[i,:])
+            p = @view(positions[sim,:])
+            r = @view(rho[sim,:])
+            v = @view(velocities[sim,:])
+            A_inv = inv(@view(p[2:end,:])' .- @view(p[1,:]))'
+            Drho[i,:] = A_inv * (@view(r[2:end]) .- r[1])
+            Dv[i,:,:] = A_inv * ((@view(v[2:end,:])' .- @view(v[1,:]))')
         end
     
         return new(rho, Drho, Dv, BVH_tree, simplices, positions, velocities)
@@ -117,9 +115,9 @@ function density(p::Vector{Float64}, estimator::PS_DTFE)
     simplexIndices = findIntersections(p, estimator.tree, estimator.positions, estimator.simplices)
 
     dens = 0.
-    for simplexIndex in simplexIndices
+    @inbounds for simplexIndex in simplexIndices
         pointIndex = estimator.simplices[simplexIndex,1]
-        dens += estimator.rho[pointIndex] + estimator.Drho[simplexIndex,:]' * (p .- estimator.positions[pointIndex,:])
+        dens += estimator.rho[pointIndex] + @view(estimator.Drho[simplexIndex,:])' * (p .- @view(estimator.positions[pointIndex,:]))
     end
     return dens
 end
@@ -129,9 +127,9 @@ function v(p::Vector{Float64}, estimator::PS_DTFE)
 
     vs = zeros(length(simplexIndices), length(p))
 
-    for (i, simplexIndex) in pairs(simplexIndices)
+    @inbounds for (i, simplexIndex) in pairs(simplexIndices)
         pointIndex = estimator.simplices[simplexIndex, 1]
-        vs[i,:] = estimator.velocities[pointIndex,:] + estimator.Dv[simplexIndex,:,:] * (p .- estimator.positions[pointIndex,:])
+        vs[i,:] = @view(estimator.velocities[pointIndex,:]) + @view(estimator.Dv[simplexIndex,:,:]) * (p .- @view(estimator.positions[pointIndex,:]))
     end
     return vs
 end
