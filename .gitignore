@@ -6,3 +6,6 @@ __pycache__
 Example3D.py
 .DS_Store
 .vscode
+*.hdf5
+*ps_dtfe
+*.jld2
