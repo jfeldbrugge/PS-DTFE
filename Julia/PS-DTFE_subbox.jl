@@ -297,7 +297,7 @@ function ps_dtfe_subbox(coords_q, coords_x, m, depth, sim_box::SimBox; N_target=
         get_subbox_estimator(coords_q_, coords_x_, [i, j, k], N_sub, m, depth, sim_box; pad=pad, dir=dir)
     end
 
-    return PS_DTFE_subbox(N_sub, N_target, m, depth, dir, L, sim_box.Ni)
+    return PS_DTFE_subbox(N_sub, N_target, m, depth, dir, sim_box.L, sim_box.Ni)
 end
 
 function ps_dtfe_subbox(coords_q, coords_x, velocities, m, depth, sim_box::SimBox; N_target=128, pad=0.05, dir="./ps_dtfe")
