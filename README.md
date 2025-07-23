@@ -14,3 +14,10 @@ In the script Example.py and notebook Example.ipynb we demonstrate how the modul
 |![PS-DTFE](figures/close_2.png)| ![Streams](figures/close_3.png)|
 
 *Figure 1: The DTFE density field (upper left), the phase-space estimator density field (upper right), the PS-DTFE density field (lower left), and the number of streams (lower right)*
+
+This code was written by:
+* Job Feldbrugge
+* Benjamin Hertzsch
+
+We thank:
+* Bram Alferink
