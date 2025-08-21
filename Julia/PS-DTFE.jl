@@ -81,6 +81,13 @@ struct PS_DTFE
     positions_initial::Matrix{Float64}
 
     function PS_DTFE(positions_initial, positions, velocities, m, depth, box)
+
+
+        positions = unwrap_x_(positions_initial, positions, L);
+        positions_initial, positions = translate(positions_initial, positions, L)
+        velocities          = frame_velocities(positions, velocities, L)
+        positions_initial, positions = frame(positions_initial, positions, L)
+
         simplices = delaunay(positions_initial).simplices
 
         dim = size(box, 1)
@@ -165,4 +172,99 @@ function vSum(p::Vector{Float64}, estimator::PS_DTFE)
         #stream-density weighted sum of velocities
         return sum(densities .* vs, dims=1) / sum(densities)
     end
+end
+
+"""
+    unwrap_x_(q, x, L)
+
+Cosmological N-body simulations normally work with periodic boundary conditions. This function undoes the wrapping of particles around the box, assuming the particles did not travel more than half the size of the box.
+"""
+function unwrap_x_(q, x, L)
+    unwrap_s.(x - q, L) + q
+end
+
+"""
+    unwrap_s(s, L)
+
+Cosmological N-body simulations normally work with periodic boundary conditions. This function undoes the wrapping of particles around the box in the displacement field, assuming the particles did not travel more than half the size of the box.
+"""
+unwrap_s(s, L) = mod((s + L / 2), L) - L / 2
+
+"""
+    translate(coords_q, coords_x, L)
+
+Cosmological N-body simulations normally work with periodic boundary conditions. This function shifts both the initial and final positions of the particles such that they are located in the simulation box in Eulerian space.
+"""
+function translate(coords_q, coords_x, L)
+    coords_q_ = copy(coords_q)
+    coords_x_ = copy(coords_x)
+
+    let index_x = coords_x .< 0.
+        coords_q_[index_x] .+= L
+        coords_x_[index_x] .+= L
+    end
+        
+    let index_x = coords_x .> L
+        coords_q_[index_x] .-= L
+        coords_x_[index_x] .-= L
+    end
+    return coords_q_, coords_x_
+end
+
+"""
+    frame(coords_q, coords_x, L, pad=0.05)
+
+Cosmological N-body simulations normally work with periodic boundary conditions. This function adds a frame of periodic particle positions around the simulation box to implement periodicity in the Delaunay tesselation.
+`pad` specifies the width of the frame in units of the simulation box size `L`.
+"""
+function frame(coords_q, coords_x, L, pad=0.05)
+    for d in 1:size(coords_q,2)
+        indexL = coords_x[:,d] .> (1. - pad) * L
+        indexR = coords_x[:,d] .< pad * L
+
+        newPointsL_q = coords_q[indexL, :]
+        newPointsL_x = coords_x[indexL, :]
+        newPointsL_q[:,d] .-= L 
+        newPointsL_x[:,d] .-= L 
+        
+        newPointsR_q = coords_q[indexR, :]
+        newPointsR_x = coords_x[indexR, :]
+        newPointsR_q[:,d] .+= L 
+        newPointsR_x[:,d] .+= L 
+
+        coords_q = vcat(coords_q, newPointsL_q)        
+        coords_q = vcat(coords_q, newPointsR_q)
+        coords_x = vcat(coords_x, newPointsL_x)        
+        coords_x = vcat(coords_x, newPointsR_x)
+    end
+
+    return coords_q, coords_x
+end
+
+"""
+    frame_velocities(coords_x, velocities, L, pad=0.05)
+
+Cosmological N-body simulations normally work with periodic boundary conditions. This function adds a frame of velocities (corresponding to the periodic particle positions) around the simulation box to implement periodicity in the Delaunay tesselation.
+`pad` specifies the width of the frame in units of the simulation box size `L`.
+"""
+function frame_velocities(coords_x, velocities, L, pad=0.05)
+    for d in 1:size(coords_x,2)
+        indexL = coords_x[:,d] .> (1. - pad) * L
+        indexR = coords_x[:,d] .< pad * L
+
+        newVelocitiesL = velocities[indexL, :]
+        newPointsL_x   = coords_x[indexL, :]
+        newPointsL_x[:,d] .-= L 
+        
+        newVelocitiesR = velocities[indexR, :]
+        newPointsR_x   = coords_x[indexR, :]
+        newPointsR_x[:,d] .+= L 
+
+        coords_x = vcat(coords_x, newPointsL_x)        
+        coords_x = vcat(coords_x, newPointsR_x)
+        velocities = vcat(velocities,  newVelocitiesL)        
+        velocities = vcat(velocities,  newVelocitiesR)        
+    end
+
+    return velocities
 end
